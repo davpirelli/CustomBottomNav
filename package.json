@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Custom Bottom Navigation Card for Home Assistant",
   "main": "dist/custom-bottom-nav.js",
+  "type": "module",
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c --watch",
@@ -20,11 +21,11 @@
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-terser": "^0.4.4",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
     "rollup": "^4.12.0",
-    "rollup-plugin-terser": "^7.0.2",
     "tslib": "^2.6.2",
     "typescript": "^5.3.3"
   },
