@@ -175,3 +175,11 @@ declare global {
     'custom-bottom-nav': CustomBottomNav;
   }
 }
+
+// Registra la card con Home Assistant
+(window as any).customCards = (window as any).customCards || [];
+(window as any).customCards.push({
+  type: 'custom-bottom-nav',
+  name: 'Custom Bottom Navigation',
+  description: 'A custom bottom navigation bar for Home Assistant'
+});
