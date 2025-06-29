@@ -101,23 +101,32 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
         display: flex;
         justify-content: space-around;
         align-items: center;
-        background: var(--card-background-color, #fff);
-        box-shadow: var(--ha-card-box-shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.05);
         padding: 8px 0;
         position: fixed;
-        left: 0;
-        right: 0;
+        left: 16px;
+        right: 16px;
         z-index: 100;
+        border-radius: 20px;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .bottom-nav {
+          background: rgba(38, 38, 38, 0.7);
+        }
       }
 
       .bottom-nav.bottom {
-        bottom: 0;
-        border-top: 1px solid var(--divider-color, #e0e0e0);
+        bottom: 16px;
       }
 
       .bottom-nav.top {
-        top: 0;
-        border-bottom: 1px solid var(--divider-color, #e0e0e0);
+        top: 16px;
       }
 
       .nav-item {
@@ -129,41 +138,65 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
         border: none;
         cursor: pointer;
         padding: 8px 12px;
-        color: var(--secondary-text-color, #727272);
-        transition: color 0.2s;
+        color: rgba(60, 60, 67, 0.6);
+        transition: all 0.2s ease;
         flex: 1;
         max-width: 100px;
+        position: relative;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .nav-item {
+          color: rgba(235, 235, 245, 0.6);
+        }
       }
 
       .nav-item:hover {
-        color: var(--primary-color, #03a9f4);
+        color: var(--primary-color, #007AFF);
       }
 
       .nav-item.active {
-        color: var(--primary-color, #03a9f4);
+        color: var(--primary-color, #007AFF);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .nav-item:hover,
+        .nav-item.active {
+          color: var(--primary-color, #0A84FF);
+        }
       }
 
       .nav-item ha-icon {
         --mdc-icon-size: 24px;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
+        transition: transform 0.2s ease;
+      }
+
+      .nav-item.active ha-icon {
+        transform: scale(1.1);
       }
 
       .label {
-        font-size: 12px;
-        font-weight: 500;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: -0.2px;
+        opacity: 0.8;
       }
 
       @media (max-width: 600px) {
         .bottom-nav {
-          padding: 4px 0;
+          padding: 6px 0;
+          left: 12px;
+          right: 12px;
+          border-radius: 16px;
         }
 
         .nav-item {
-          padding: 4px 8px;
+          padding: 6px 8px;
         }
 
         .label {
-          font-size: 11px;
+          font-size: 9px;
         }
       }
     `;
