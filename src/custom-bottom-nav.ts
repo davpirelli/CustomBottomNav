@@ -2,14 +2,20 @@ import { LitElement, html, css, TemplateResult, CSSResultGroup } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardConfig, LovelaceCard } from 'custom-card-helpers';
 
+interface LovelaceCardEditor extends HTMLElement {
+  setConfig(config: CustomBottomNavConfig): void;
+}
+
 interface RouteConfig {
   path: string;
   icon: string;
   label?: string;
   active_icon?: string;
+  type?: 'dashboard' | 'entity';
+  entity?: string;
 }
 
-interface CustomBottomNavConfig extends LovelaceCardConfig {
+export interface CustomBottomNavConfig extends LovelaceCardConfig {
   type: string;
   routes: RouteConfig[];
   show_labels?: boolean;
@@ -35,6 +41,11 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
     };
   }
 
+  public static async getConfigElement(): Promise<LovelaceCardEditor> {
+    await import('./custom-bottom-nav-editor');
+    return document.createElement('custom-bottom-nav-editor');
+  }
+
   public getCardSize(): number {
     return 3;
   }
@@ -55,9 +66,22 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
     this.requestUpdate();
   };
 
-  private _navigate(path: string): void {
-    history.pushState(null, '', path);
-    window.dispatchEvent(new Event('location-changed'));
+  private _navigate(route: RouteConfig): void {
+    if (route.type === 'entity' && route.entity) {
+      this._handleEntityRoute(route.entity);
+    } else {
+      history.pushState(null, '', route.path);
+      window.dispatchEvent(new Event('location-changed'));
+    }
+  }
+
+  private _handleEntityRoute(entityId: string): void {
+    const event = new CustomEvent('hass-more-info', {
+      detail: { entityId },
+      bubbles: true,
+      composed: true
+    });
+    this.dispatchEvent(event);
   }
 
   protected render(): TemplateResult {
@@ -76,7 +100,7 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
           return html`
             <button
               class="nav-item ${isActive ? 'active' : ''}"
-              @click=${() => this._navigate(route.path)}
+              @click=${() => this._navigate(route)}
             >
               <ha-icon icon="${icon}"></ha-icon>
               ${this._config.show_labels && route.label

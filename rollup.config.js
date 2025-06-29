@@ -5,7 +5,7 @@ import terser from '@rollup/plugin-terser';
 export default {
   input: 'src/custom-bottom-nav.ts',
   output: {
-    file: 'dist/custom-bottom-nav.js',
+    dir: 'dist',
     format: 'es',
     sourcemap: false
   },
