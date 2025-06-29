@@ -34,6 +34,16 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
     if (!config.routes || !Array.isArray(config.routes)) {
       throw new Error('You need to define routes');
     }
+    
+    // Validate routes
+    config.routes.forEach((route, index) => {
+      if (route.type === 'entity' && !route.entity) {
+        console.warn(`Route ${index} is of type 'entity' but no entity is specified`);
+      } else if (route.type !== 'entity' && !route.path) {
+        console.warn(`Route ${index} requires a path`);
+      }
+    });
+    
     this._config = {
       show_labels: true,
       position: 'bottom',
@@ -94,13 +104,16 @@ export class CustomBottomNav extends LitElement implements LovelaceCard {
     return html`
       <nav class="bottom-nav ${position}">
         ${this._config.routes.map(route => {
-          const isActive = this._currentPath === route.path;
+          const isActive = route.type === 'entity' 
+            ? false  // Entities don't have active state based on path
+            : this._currentPath === route.path;
           const icon = isActive && route.active_icon ? route.active_icon : route.icon;
           
           return html`
             <button
               class="nav-item ${isActive ? 'active' : ''}"
               @click=${() => this._navigate(route)}
+              title="${route.type === 'entity' ? route.entity : route.path}"
             >
               <ha-icon icon="${icon}"></ha-icon>
               ${this._config.show_labels && route.label
