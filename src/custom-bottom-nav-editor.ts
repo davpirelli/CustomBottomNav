@@ -18,7 +18,7 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
   @property({ attribute: false }) public hass?: HomeAssistant;
   @state() private _config?: CustomBottomNavConfig;
   @state() private _helpers?: any;
-  @state() private _selectedRouteIndex: number = -1;
+  @state() private _addingRoute: boolean = false;
   
   private _initialized = false;
 
@@ -52,32 +52,44 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
     if (!this._config || !this.hass) return;
 
     const target = ev.target as any;
-    if (this[`_${target.configValue}`] === target.value) return;
-
-    if (target.configValue) {
+    const configValue = target.configValue || ev.detail?.value;
+    
+    if (configValue) {
       const newConfig = { ...this._config };
       
-      if (target.value === '') {
-        delete newConfig[target.configValue];
+      if (ev.detail?.value === undefined || ev.detail?.value === '') {
+        delete newConfig[configValue];
       } else {
-        newConfig[target.configValue] = target.value;
+        newConfig[configValue] = ev.detail?.value ?? target.value;
       }
       
       fireEvent(this, 'config-changed', { config: newConfig });
     }
   }
 
-  private _addRoute(): void {
+  private _addRoute(type: 'dashboard' | 'entity'): void {
     if (!this._config) return;
 
     const routes = [...(this._config.routes || [])];
-    routes.push({
-      path: '/lovelace/0',
-      icon: 'mdi:home',
-      label: 'New Tab',
-      type: 'dashboard'
-    });
+    
+    if (type === 'dashboard') {
+      routes.push({
+        path: '/lovelace/0',
+        icon: 'mdi:view-dashboard',
+        label: 'New Dashboard',
+        type: 'dashboard'
+      });
+    } else {
+      routes.push({
+        path: '',
+        icon: 'mdi:lightbulb',
+        label: 'New Entity',
+        type: 'entity',
+        entity: ''
+      });
+    }
 
+    this._addingRoute = false;
     fireEvent(this, 'config-changed', { 
       config: { ...this._config, routes } 
     });
@@ -102,6 +114,17 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
       ...routes[index],
       [field]: value
     };
+
+    // If changing type, reset path/entity
+    if (field === 'type') {
+      if (value === 'entity') {
+        routes[index].entity = '';
+        routes[index].path = '';
+      } else {
+        routes[index].path = '/lovelace/0';
+        delete routes[index].entity;
+      }
+    }
 
     fireEvent(this, 'config-changed', { 
       config: { ...this._config, routes } 
@@ -163,12 +186,43 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
         </div>
 
         <div class="routes-section">
-          <h3>Navigation Routes</h3>
+          <div class="routes-header">
+            <h3>Navigation Items</h3>
+            ${this._addingRoute ? html`
+              <div class="add-buttons">
+                <mwc-button 
+                  @click=${() => this._addRoute('dashboard')}
+                  icon="mdi:view-dashboard"
+                >
+                  Dashboard
+                </mwc-button>
+                <mwc-button 
+                  @click=${() => this._addRoute('entity')}
+                  icon="mdi:lightbulb"
+                >
+                  Entity
+                </mwc-button>
+                <ha-icon-button
+                  @click=${() => this._addingRoute = false}
+                  .path=${'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'}
+                ></ha-icon-button>
+              </div>
+            ` : html`
+              <ha-icon-button
+                @click=${() => this._addingRoute = true}
+                .path=${'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z'}
+              ></ha-icon-button>
+            `}
+          </div>
           
           ${this._config.routes?.map((route, index) => html`
             <div class="route-item">
               <div class="route-header">
-                <span class="route-number">${index + 1}</span>
+                <div class="route-type-icon">
+                  <ha-icon 
+                    icon=${route.type === 'entity' ? 'mdi:lightbulb' : 'mdi:view-dashboard'}
+                  ></ha-icon>
+                </div>
                 <div class="route-controls">
                   <ha-icon-button
                     .disabled=${index === 0}
@@ -191,9 +245,9 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
                 <ha-select
                   label="Type"
                   .value=${route.type || 'dashboard'}
-                  @selected=${(e: Event) => {
-                    const target = e.target as any;
-                    this._routeValueChanged(index, 'type', target.value);
+                  @closed=${(e: Event) => e.stopPropagation()}
+                  @selected=${(e: CustomEvent) => {
+                    this._routeValueChanged(index, 'type', e.detail.value);
                   }}
                 >
                   <mwc-list-item value="dashboard">Dashboard</mwc-list-item>
@@ -214,18 +268,21 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
                     .hass=${this.hass}
                     label="Entity"
                     .value=${route.entity || ''}
-                    @value-changed=${(e: CustomEvent) =>
-                      this._routeValueChanged(index, 'entity', e.detail.value)
-                    }
+                    allow-custom-entity
+                    @value-changed=${(e: CustomEvent) => {
+                      e.stopPropagation();
+                      this._routeValueChanged(index, 'entity', e.detail.value);
+                    }}
                   ></ha-entity-picker>
                 `}
 
                 <ha-icon-picker
                   label="Icon"
                   .value=${route.icon || ''}
-                  @value-changed=${(e: CustomEvent) => 
-                    this._routeValueChanged(index, 'icon', e.detail.value)
-                  }
+                  @value-changed=${(e: CustomEvent) => {
+                    e.stopPropagation();
+                    this._routeValueChanged(index, 'icon', e.detail.value);
+                  }}
                 ></ha-icon-picker>
 
                 <ha-textfield
@@ -240,17 +297,14 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
                 <ha-icon-picker
                   label="Active Icon (optional)"
                   .value=${route.active_icon || ''}
-                  @value-changed=${(e: CustomEvent) => 
-                    this._routeValueChanged(index, 'active_icon', e.detail.value)
-                  }
+                  @value-changed=${(e: CustomEvent) => {
+                    e.stopPropagation();
+                    this._routeValueChanged(index, 'active_icon', e.detail.value);
+                  }}
                 ></ha-icon-picker>
               </div>
             </div>
           `)}
-
-          <ha-button @click=${this._addRoute}>
-            Add Route
-          </ha-button>
         </div>
       </div>
     `;
@@ -270,10 +324,27 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
         margin-top: 24px;
       }
 
-      .routes-section h3 {
-        margin: 0 0 16px 0;
+      .routes-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .routes-header h3 {
+        margin: 0;
         font-size: 16px;
         font-weight: 500;
+      }
+
+      .add-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .add-buttons mwc-button {
+        --mdc-theme-primary: var(--primary-color);
       }
 
       .route-item {
@@ -290,13 +361,19 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
         margin-bottom: 12px;
       }
 
-      .route-number {
-        font-weight: 500;
-        color: var(--primary-color);
-        padding: 4px 8px;
-        background: var(--primary-color-light);
-        border-radius: 4px;
-        opacity: 0.2;
+      .route-type-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: var(--primary-background-color);
+        border-radius: 50%;
+        color: var(--primary-text-color);
+      }
+
+      .route-type-icon ha-icon {
+        --mdc-icon-size: 20px;
       }
 
       .route-controls {
@@ -310,17 +387,19 @@ export class CustomBottomNavEditor extends LitElement implements LovelaceCardEdi
         gap: 12px;
       }
 
-      ha-button {
-        margin-top: 8px;
-      }
-
       ha-icon-button {
         --mdc-icon-button-size: 36px;
       }
 
       ha-textfield,
-      ha-icon-picker {
+      ha-icon-picker,
+      ha-entity-picker,
+      ha-select {
         width: 100%;
+      }
+
+      ha-entity-picker {
+        display: block;
       }
     `;
   }
